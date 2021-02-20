@@ -31,3 +31,13 @@ $ npm stop
 
 
 [egg]: https://eggjs.org
+
+
+### api documentation
+```
+{
+  code: 0,  // 0成功 -1错误 -666登入状态过期 其它失败
+  data: {},
+  message: ''
+}
+```

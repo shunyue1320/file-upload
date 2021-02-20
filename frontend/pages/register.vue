@@ -93,7 +93,7 @@ export default {
 
           try {
             const res = await this.$http.post('/user/register', form)
-            if (ret.code == 0) {
+            if (res.code == 0) {
               this.$alert('注册成功', '成功', {
                 confirmButtonText: '去登入',
                 callback: () => {
@@ -101,7 +101,7 @@ export default {
                 }
               })
             } else {
-              this.$message.error(ret.message)
+              this.$message.error(res.message)
             }
           } catch(error) {
             console.error(error)

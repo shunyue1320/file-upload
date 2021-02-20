@@ -9,7 +9,7 @@ class UtilController extends Controller {
       width: 100,
       height: 40,
       fontSize: 50,
-      noise: 3
+      noise: 3,
     })
     ctx.session.captcha = captcha.text
     ctx.response.type = 'image/svg+xml'
