@@ -33,6 +33,7 @@
     </el-form>
   </div>
 </template>
+
 <script>
 import md5 from 'md5'
 
@@ -82,7 +83,6 @@ export default {
     },
     handleRegister() {
       this.$refs.registerForm.validate(async valid => {
-        console.log("$axios", this.$axios.defaults.baseURL)
         if (valid) {
           const form = {
             email: this.form.email,
