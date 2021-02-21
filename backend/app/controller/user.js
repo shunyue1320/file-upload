@@ -14,10 +14,14 @@ const createRule = {
 class UserController extends BaseController {
   async login() {
     const { ctx, app } = this
-    const { email, captcha, password } = ctx.request.body
+    const { email, captcha, password, emailcode } = ctx.request.body
     if (captcha.toUpperCase() !== ctx.session.captcha.toUpperCase()) {
       return this.error('验证码错误')
     }
+    if (emailcode !== ctx.session.emailcode) {
+      return this.error('邮箱验证码错误')
+    }
+
     const user = await ctx.model.User.findOne({
       email,
       password: md5(password + HashSalt)
@@ -71,7 +75,11 @@ class UserController extends BaseController {
     // 校验用户名是否存在
   }
   async info() {
+    const { ctx } = this
 
+    const { email } = ctx.state
+    const user = await this.checkEmail(email)
+    this.success(user)
   }
 }
 

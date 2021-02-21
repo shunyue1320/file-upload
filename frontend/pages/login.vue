@@ -97,7 +97,8 @@ export default {
           const form = {
             email: this.form.email,
             password: md5(this.form.password),
-            captcha: this.form.captcha
+            captcha: this.form.captcha,
+            emailcode: this.form.emailcode
           }
 
           try {
