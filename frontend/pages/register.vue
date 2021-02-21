@@ -12,7 +12,7 @@
         <div class="captcha">
           <img :src="code.captchaUrl" alt="" @click="updateCaptcha">
         </div>
-        <el-input v-model="form.captcha" placeholder="请输入验证码" style="width: 80%"></el-input>
+        <el-input v-model="form.captcha" placeholder="请输入验证码" style="width: 70%"></el-input>
       </el-form-item>
 
       <el-form-item prop="nickname" label="昵称">

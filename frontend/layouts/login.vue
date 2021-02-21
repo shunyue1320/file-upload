@@ -28,7 +28,7 @@ export default {
   .captcha-container {
     .captcha {
       position: absolute;
-      right: -1rem;
+      right: 0rem;
       img {
         width: 10rem;
         height: 2.5rem;
