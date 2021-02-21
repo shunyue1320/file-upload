@@ -13,7 +13,26 @@ const createRule = {
 
 class UserController extends BaseController {
   async login() {
-
+    const { ctx, app } = this
+    const { email, captcha, password } = ctx.request.body
+    if (captcha.toUpperCase() !== ctx.session.captcha.toUpperCase()) {
+      return this.error('验证码错误')
+    }
+    const user = await ctx.model.User.findOne({
+      email,
+      password: md5(password + HashSalt)
+    })
+    if (!user) {
+      return this.error('邮箱或密码错误')
+    }
+    // 将用户信息加密成token返回
+    const token = jwt.sign({
+      _id: user._id,
+      email
+    }, app.config.jwt.secret, {
+      expiresIn: '1h' //过期时间
+    })
+    this.success({ token, email, nickname: user.nickname })
   }
   async register() {
     const { ctx } = this

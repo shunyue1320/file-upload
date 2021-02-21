@@ -35,7 +35,10 @@ module.exports = appInfo => {
       client: {
         url: 'mongodb://127.0.0.1:27017/fileupload',
         options: {},
-      },
+      }
     },
+    jwt: {
+      secret: ':guojianbo@shunyue'
+    }
   }
 }
