@@ -96,6 +96,19 @@ export default {
       this.hash = await this.calculateHashWorker(chunks)  // Worker计算hash
       // const hash2 = await this.calculateHashIdle(chunks)   // requestIdleCallback计算hash
       // const hash3 = await this.calculateHashSample() // 抽样计算hash
+      // 咨询后端是否已上传有切片
+
+      this.chunks = chunks.map((chunk, index) => {
+        const name = this.hash + '-' + index
+        return {
+          hash: this.hash,
+          name,
+          index,
+          chunk: chunk.file,
+          progress: 0
+        }
+      })
+      await this.uploadChunks()
     },
     createFileChunk(file, size = CHUNK_SIZE) {
       const chunks = []
@@ -202,6 +215,32 @@ export default {
     async isImage(file) {
       return await this.isGif(file) || await this.isPng(file) || await this.isJpg(file)
     },
+    async uploadChunks() {
+      const requests = this.chunks.map(chunk => {
+        const { hash, name, chunk: fileChunk } = chunk
+        // 转promise
+        const form = new FormData()
+        form.append('hash', hash)
+        form.append('name', name)
+        form.append('chunk', fileChunk)
+        return form
+      }).map((form, index) => this.$http.post('/uploadfile', form, {
+        onUploadProgress: progress => {
+          //每个区块的进度条
+          this.chunks[index].progress = Number(((progress.loaded / progress.total) * 100).toFixed(2))
+        }
+      }))
+      // 并发量控制
+      await Promise.all(requests)
+      await this.mergeRequest()
+    },
+    async mergeRequest() {
+      this.$http.post('/mergefile', {
+        ext: this.file.name.split('.').pop(),
+        size: CHUNK_SIZE,
+        hash: this.hash
+      })
+    }
   }
 }
 </script>
