@@ -16,8 +16,8 @@ module.exports = ({ app }) => {
       ctx.state.email = ret.email
       ctx.state.userid = ret._id
       await next()
-    } catch(e) {
-      if (err.name == 'TokenExpiredError') {
+    } catch(error) {
+      if (error.name == 'TokenExpiredError') {
         ctx.body = {
           code: -666,
           message: '登录过期了'
