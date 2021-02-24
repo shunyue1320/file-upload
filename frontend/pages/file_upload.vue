@@ -234,18 +234,55 @@ export default {
           form.append('name', name)
           form.append('chunk', fileChunk)
 
-          // return { form, index }
-          return this.$http.post('/uploadfile', form, {
-            onUploadProgress: progress => {
-              //每个区块的进度条
-              this.chunks[index].progress = Number(((progress.loaded / progress.total) * 100).toFixed(2))
-            }
-          })
+          return { form, index }
         })
       // 并发量控制 tcp连接过多造成的卡顿
-      await Promise.all(requests)
-      // await this.sendRequest(formDatas)
+      await this.sendRequest(formDatas)
       await this.mergeRequest()
+    },
+    //  一次最多并发3个请求，一个请求结束后执行下一个请求，一个请求三次失败整体中止
+    async sendRequest(formDatas, limit = 3) {
+      return new Promise((resolve, reject) => {
+        const len = formDatas.length
+        let counter = 0, isStop = false
+        const start = async () => {
+          if (isStop) {
+            return
+          }
+
+          const task = formDatas.shift()
+          if (task) {
+            const { form, index, error = 0 } = task
+            try {
+              await this.$http.post('/uploadfile', form, {
+                onUploadProgress: progress => {
+                  //每个区块的进度条
+                  this.chunks[index].progress = Number(((progress.loaded / progress.total) * 100).toFixed(2))
+                }
+              })
+              if (counter == len - 1) {
+                resolve()
+              } else {
+                counter++
+                start()
+              }
+            } catch(error) {
+              this.formDatas[index.progress] = -1
+              if (task.error < 3) {
+                task.error++
+                formDatas.unshift(task)
+                start()
+              } else {
+                isStop = true
+              }
+            }
+          }
+        }
+        while (limit > 0) {
+           ()
+          limit -= 1
+        }
+      })
     },
     async mergeRequest() {
       this.$http.post('/mergefile', {
