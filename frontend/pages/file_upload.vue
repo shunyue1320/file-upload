@@ -9,13 +9,14 @@
     </div>
     <el-button @click="uploadFile">上传文件</el-button>
     <div>
-      <p>计算文件hash的进度</p>
+      <p>计算文件hash的进度：</p>
       <el-progress :text-inside="true" :percentage="hashProgress"></el-progress>
     </div>
 
     <div>
-      <div class="cube-container">
-        <div class="cube" v-for="chunk in chunks" :key="chunk.name" :style="{width: cubeWidth + 'px'}">
+      <p>hash文件块上传进度：</p>
+      <div class="cube-container" :style="`width: ${cubeWidth}px;`">
+        <div class="cube" v-for="chunk in chunks" :key="chunk.name" :style="`background: linear-gradient( #FFC107 ${chunk.progress}%, #fff ${chunk.progress}% );`">
           <div
             :class="{
               'uploading': chunk.progress > 0 && chunk.progress < 100,
@@ -23,7 +24,7 @@
               'error': chunk.progress < 0
             }"
           >
-            <i v-if="chunk.progress > 0 && chunk.progress < 100" class="el-icon-loading" style="`background: linear-gradient( #FFC107 ${percentFinish}%, #fff ${percentFinish}% );`" />
+            <i v-if="chunk.progress > 0 && chunk.progress < 100" class="el-icon-loading" />
             <i v-if="chunk.progress == 100" class="el-icon-success" />
             <i v-if="chunk.progress < 0" class="el-icon-error" />
           </div>
@@ -34,20 +35,19 @@
 </template>
 <script>
 import sparkMD5 from 'spark-md5'
-const CHUNK_SIZE = 0.5 * 1024 * 1024 //文件切片大小
+const CHUNK_SIZE = 0.1 * 1024 * 1024 //文件切片大小
 
 export default {
   data() {
     return {
       file: null,
       chunks: [],
-      // uploadProgress: 0,
       hashProgress: 0
     }
   },
   computed: {
     cubeWidth() {
-      return Math.ceil(Math.sqrt(this.chunks.length)) * 16
+      return Math.ceil(Math.sqrt(this.chunks.length)) * 50
     },
     uploadProgress() {
       if (!this.file || !this.chunks.length) {
@@ -96,7 +96,16 @@ export default {
       this.hash = await this.calculateHashWorker(chunks)  // Worker计算hash
       // const hash2 = await this.calculateHashIdle(chunks)   // requestIdleCallback计算hash
       // const hash3 = await this.calculateHashSample() // 抽样计算hash
-      // 咨询后端是否已上传有切片
+      
+      // 查询后端是否已上传有切片
+      const { data: {uploaded, uploadedList} } = await this.$http.post('/checkfile', {
+        hash: this.hash,
+        ext: this.file.name.split('.').pop()
+      })
+
+      if (uploaded) {
+        return this.$message.success('秒传成功')
+      }
 
       this.chunks = chunks.map((chunk, index) => {
         const name = this.hash + '-' + index
@@ -105,10 +114,10 @@ export default {
           name,
           index,
           chunk: chunk.file,
-          progress: 0
+          progress: uploadedList.indexOf(name) === -1 ? 0 : 100
         }
       })
-      await this.uploadChunks()
+      await this.uploadChunks(uploadedList)
     },
     createFileChunk(file, size = CHUNK_SIZE) {
       const chunks = []
@@ -215,23 +224,27 @@ export default {
     async isImage(file) {
       return await this.isGif(file) || await this.isPng(file) || await this.isJpg(file)
     },
-    async uploadChunks() {
-      const requests = this.chunks.map(chunk => {
-        const { hash, name, chunk: fileChunk } = chunk
-        // 转promise
-        const form = new FormData()
-        form.append('hash', hash)
-        form.append('name', name)
-        form.append('chunk', fileChunk)
-        return form
-      }).map((form, index) => this.$http.post('/uploadfile', form, {
-        onUploadProgress: progress => {
-          //每个区块的进度条
-          this.chunks[index].progress = Number(((progress.loaded / progress.total) * 100).toFixed(2))
-        }
-      }))
-      // 并发量控制
+    async uploadChunks(uploadedList) {
+      const formDatas = this.chunks
+        .filter(chunk => uploadedList.indexOf(chunk.name) == -1)
+        .map(chunk => {
+          const { hash, name, index, chunk:  fileChunk } = chunk
+          const form = new FormData()
+          form.append('hash', hash)
+          form.append('name', name)
+          form.append('chunk', fileChunk)
+
+          // return { form, index }
+          return this.$http.post('/uploadfile', form, {
+            onUploadProgress: progress => {
+              //每个区块的进度条
+              this.chunks[index].progress = Number(((progress.loaded / progress.total) * 100).toFixed(2))
+            }
+          })
+        })
+      // 并发量控制 tcp连接过多造成的卡顿
       await Promise.all(requests)
+      // await this.sendRequest(formDatas)
       await this.mergeRequest()
     },
     async mergeRequest() {
@@ -255,11 +268,10 @@ export default {
 
 .cube-container {
   .cube {
-    width: 14px;
-    height: 14px;
-    line-height: 12px;
-    border: 1px solid white;
-    background: #eee;
+    width: 50px;
+    height: 50px;
+    line-height: 50px;
+    border: 1px solid #000;
     float: left;
 
     > .success {

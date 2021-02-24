@@ -60,6 +60,26 @@ class UtilController extends BaseController {
       url: `/public/${hash}.${ext}`
     })
   }
+
+  async checkfile() {
+    const { ctx } = this
+    const { hash, ext } = ctx.request.body
+    const filePath = path.resolve(this.config.UPLOAD_DIR, `${hash}.${ext}`)
+
+    let uploaded = false, uploadedList = []
+    if (fse.existsSync(filePath)) {
+      uploaded = true
+    } else {
+      const dirPath = path.resolve(this.config.UPLOAD_DIR, hash)
+      uploadedList = fse.existsSync(dirPath) ? 
+        (await fse.readdir(dirPath)).filter(name => name[0] !== '.')
+        : []
+    }
+    this.success({
+      uploaded,
+      uploadedList
+    })
+  }
 }
 
 module.exports = UtilController
